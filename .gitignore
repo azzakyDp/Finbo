@@ -1,0 +1,14 @@
+.env
+.env.local
+.env.*.local
+
+*.log
+npm-debug.log*
+
+node_modules/
+
+dashboard/dist/
+
+.vercel/
+
+keuangan_ran.xlsx

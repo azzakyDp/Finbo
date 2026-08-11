@@ -1,0 +1,10 @@
+.app {
+  display: grid;
+  grid-template-columns: 232px 1fr;
+  min-height: 100vh;
+}
+.main { padding: 32px 40px 60px; }
+
+@media (max-width: 900px) {
+  .app { grid-template-columns: 1fr; }
+}

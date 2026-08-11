@@ -1,0 +1,30 @@
+:root {
+  --ink: #161B22;
+  --ink-soft: #232B36;
+  --paper: #F4F0E6;
+  --paper-dim: #EDE8D9;
+  --teal: #3FA796;
+  --terracotta: #E2654B;
+  --gray: #8B94A3;
+  --gray-dark: #3A4250;
+  --line: #DDD6C4;
+
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper-dim);
+  font-family: var(--font-body);
+  color: var(--gray-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font-family: inherit; }
+table { font-family: inherit; }
