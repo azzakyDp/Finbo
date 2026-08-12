@@ -125,13 +125,19 @@ function getBot() {
 // Endpoint yang dipanggil Telegram sendiri (bukan dashboard), jadi TIDAK
 // boleh lewat requireAuthenticatedUser di bawah — makanya didaftarkan di sini.
 app.post("/api/telegram-webhook", async (req, res) => {
+  const bot = getBot();
+  if (!bot) {
+    console.error(" Bot gagal dibuat — cek TELEGRAM_BOT_TOKEN di Vercel env");
+    return res.status(200).end();
+  }
+
   try {
-    const bot = getBot();
-    if (!bot) return res.status(500).json({ success: false, message: "Bot belum dikonfigurasi" });
+    console.log("Update masuk", JSON.stringify(req.body).slice(0, 200));
     await bot.handleUpdate(req.body);
   } catch (err) {
-    console.error("Webhook error:", err.message);
+    console.error("Gagal handle update:", err.message, err.stack);
   }
+
   res.status(200).end();
 });
 
