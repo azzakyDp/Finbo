@@ -1,3 +1,13 @@
+// src/bot/telegramBot.js
+// Telegram bot untuk pencatatan keuangan dengan alur percakapan sederhana.
+// Command utama:
+// /pemasukan       -> tambah pemasukan
+// /pengeluaran     -> tambah pengeluaran
+// /cek_saldo       -> lihat saldo
+// /cek_pengeluaran -> lihat pengeluaran minggu/bulan
+// /menu            -> bantuan
+// /undo            -> batalkan transaksi terakhir
+
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const parserService = require("../services/parserService");
@@ -5,6 +15,8 @@ const txService = require("../services/transactionService");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
+// State percakapan disimpan di memory. Cocok untuk 1 instance bot.
+// Jika nanti deploy multi-instance/serverless, pindahkan state ke Redis/Supabase.
 const sessions = new Map();
 
 function formatRupiah(n) {
@@ -28,7 +40,7 @@ function todayLabel() {
   });
 }
 
-const MENU_TEXT = `*MENU BOT RAN*
+/* `*MENU BOT RAN*
 /dashboard 
 Dashboard keuangan
 
@@ -53,6 +65,30 @@ Membatalkan transaksi terakhir
 Kamu juga bisa mengetik format langsung, misalnya:
 pemasukan = 500000 gaji
 pengeluaran = 25000 makan + 10000 parkir`;
+*/
+
+const MENU_TEXT = `*MENU BOT RAN*
+  /pemasukan
+Tambah uang masuk ke saldo.
+
+/pengeluaran
+Catat barang dan harga yang dibeli.
+
+/cek_saldo
+Lihat saldo, total pemasukan, dan pengeluaran.
+
+/cek_pengeluaran
+Lihat pengeluaran mingguan atau bulanan, lengkap dengan total biaya dan daftar barang.
+
+/menu
+Tampilkan menu ini.
+
+/undo
+Batalkan transaksi terakhir.
+
+Kamu juga masih bisa mengetik format langsung, misalnya:
+pemasukan = 500000 gaji
+pengeluaran = 25000 makan + 10000 parkir`;
 
 function clearSession(chatId) {
   sessions.delete(String(chatId));
@@ -69,7 +105,7 @@ function getSession(chatId) {
 function parseAmountAndNote(text) {
   const raw = String(text || "").trim();
 
-  // parse-message: 500000 gaji
+  // 500000 gaji
   let m = raw.match(/^rp?\s*([\d.,]+)\s*(?:[|=-]\s*)?(.*)$/i);
   if (m) {
     const amount = parserService.toNumber(m[1]);
@@ -79,7 +115,7 @@ function parseAmountAndNote(text) {
     }
   }
 
-  // parse-message: gaji 500000
+  // gaji 500000
   m = raw.match(/^(.*?)\s+rp?\s*([\d.,]+)$/i);
   if (m) {
     const amount = parserService.toNumber(m[2]);
@@ -158,16 +194,6 @@ function createBot() {
   bot.command("menu", async (ctx) => {
     clearSession(ctx.chat.id);
     await ctx.replyWithMarkdown(MENU_TEXT);
-
-    try {
-      clearSession(ctx.chat.id);
-
-      await ctx.replyWithMarkdown(MENU_TEXT);
-
-      console.log("Reply berhasil dikirim");
-    } catch (error) {
-      console.error("Reply gagal dikirim:", error);
-    }
   });
 
   // =========================
