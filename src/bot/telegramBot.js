@@ -1,5 +1,3 @@
-// src/bot/telegramBot.js
-// Telegram bot untuk pencatatan keuangan dengan alur percakapan sederhana.
 // Command utama:
 // /pemasukan       -> tambah pemasukan
 // /pengeluaran     -> tambah pengeluaran
@@ -40,7 +38,10 @@ function todayLabel() {
   });
 }
 
-/* `*MENU BOT RAN*
+const MENU_TEXT = `*MENU BOT RAN*
+/menu
+Menampilkan menu list perintah
+
 /dashboard 
 Dashboard keuangan
 
@@ -63,30 +64,6 @@ Mengecek total pengeluaran bulan ini
 Membatalkan transaksi terakhir
 
 Kamu juga bisa mengetik format langsung, misalnya:
-pemasukan = 500000 gaji
-pengeluaran = 25000 makan + 10000 parkir`;
-*/
-
-const MENU_TEXT = `*MENU BOT RAN*
-  /pemasukan
-Tambah uang masuk ke saldo.
-
-/pengeluaran
-Catat barang dan harga yang dibeli.
-
-/cek_saldo
-Lihat saldo, total pemasukan, dan pengeluaran.
-
-/cek_pengeluaran
-Lihat pengeluaran mingguan atau bulanan, lengkap dengan total biaya dan daftar barang.
-
-/menu
-Tampilkan menu ini.
-
-/undo
-Batalkan transaksi terakhir.
-
-Kamu juga masih bisa mengetik format langsung, misalnya:
 pemasukan = 500000 gaji
 pengeluaran = 25000 makan + 10000 parkir`;
 
