@@ -59,7 +59,28 @@ Tampilkan menu ini.
 /undo
 Batalkan transaksi terakhir.
 
-Kamu juga masih bisa mengetik format langsung, misalnya:
+/dashboard 
+Dashboard keuangan
+
+/pemasukan
+Tambah saldo
+
+/pengeluaran
+Mencatat pengeluaran barang/kebutuhan dan harga
+
+/cek_saldo 
+Mengecek saldo pemasukan
+
+/cek_pengeluaran_minggu_ini 
+Mengecek total pengeluaran minggu ini
+
+/cek_pengeluaran_bulan_ini 
+Mengecek total pengeluaran bulan ini
+
+/undo 
+Membatalkan transaksi terakhir
+
+Kamu juga bisa mengetik format langsung, misalnya:
 pemasukan = 500000 gaji
 pengeluaran = 25000 makan + 10000 parkir`;
 
@@ -140,7 +161,7 @@ function createBot() {
   bot.start(async (ctx) => {
     clearSession(ctx.chat.id);
     await ctx.reply(
-      "Halo! 👋 Saya Ran, pencatat keuanganmu.\n\n" +
+      "Halo! Saya Ran, pencatat keuanganmu.\n\n" +
       "Mau catat pemasukan, pengeluaran, atau cek saldo? " +
       "Ketik /menu untuk melihat semua pilihan."
     );
@@ -382,7 +403,7 @@ function createBot() {
 
     const session = getSession(ctx.chat.id);
 
-    // Tahap pemasukan: nominal
+ 
     if (session?.type === "pemasukan" && session.step === "amount") {
       const parsed = parseAmountAndNote(text);
 
