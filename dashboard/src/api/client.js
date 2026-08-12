@@ -1,4 +1,3 @@
-// src/api/client.js
 const AUTH_TOKEN_KEY = "bot-kos-auth-token";
 
 export const fmtRp = (n) => "Rp" + Number(n || 0).toLocaleString("id-ID");
