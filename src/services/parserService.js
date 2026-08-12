@@ -1,8 +1,3 @@
-// src/services/parserService.js
-// Parser bahasa natural — dipindah dari server.js lama (route /api/prompt),
-// dijadikan fungsi murni supaya bisa dipakai bareng oleh bot Telegram
-// maupun endpoint web, tanpa duplikasi logic.
-
 function toNumber(str) {
   if (!str) return NaN;
   let s = String(str)
@@ -49,16 +44,12 @@ function parseDate(text) {
   return { date, matchedText: dateMatch ? dateMatch[1] : null };
 }
 
-/**
- * Cek apakah teks adalah perintah menu/bantuan.
- */
+// opsi menu 
 function isMenuCommand(text) {
   return /^menu$/i.test(text.trim());
 }
 
-/**
- * Cek apakah teks adalah perintah "total pengeluaran"/"total pemasukan".
- */
+// opsi pengeluaran
 function matchTotalCommand(text) {
   const lower = text.trim().toLowerCase();
   const m = /^total (pengeluaran|pemasukan)$/i.test(lower);
@@ -66,17 +57,7 @@ function matchTotalCommand(text) {
   return lower.includes("pengeluaran") ? "pengeluaran" : "pemasukan";
 }
 
-/**
- * Parse pesan transaksi bahasa natural.
- * Contoh input:
- *   "pengeluaran 12-10-25 = 132000 celana + 18000 parkir stasiun"
- *   "pemasukan hari ini = 500000 gaji"
- *   "50000 nasi padang"  (auto-detect jadi pengeluaran kalau ada catatan teks)
- *
- * @param {string} rawText
- * @returns {{ ok: true, type: 'pemasukan'|'pengeluaran', date: Date, items: {amount:number, note:string}[] }
- *          | { ok: false, reason: string, badItems?: string[] }}
- */
+// menerjemahkan text
 function parseMessage(rawText) {
   const original = String(rawText || "");
   const text = original.trim();
@@ -87,7 +68,6 @@ function parseMessage(rawText) {
 
   let autoType = null;
 
-  // Auto-detect: kalau tidak ada kata "pemasukan"/"pengeluaran" dan cuma angka murni
   if (!text.match(/pemasukan|pengeluaran/i)) {
     const hasNote = /[a-zA-Z]+/.test(text.replace(/\d|[-=+/ ]/g, ""));
     const onlyNumbers = text.includes("=") && !hasNote;
