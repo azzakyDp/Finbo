@@ -1,6 +1,4 @@
-// src/services/transactionService.js
-// Semua akses database transaksi dan user dipusatkan di sini.
-
+// Akses transaksi database
 const { getClient } = require("../config/supabase");
 const { getDateRange, toDateOnlyString } = require("./dateUtils");
 
