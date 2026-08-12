@@ -15,11 +15,6 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "..", "dashboard", "dist")));
 
-// Verifikasi initData Telegram WebApp.
-// PENTING: rumus secret_key untuk WebApp BEDA dengan Telegram Login Widget.
-// Spek resmi: secret_key = HMAC_SHA256(key="WebAppData", data=bot_token)
-// (bukan secret_key = SHA256(bot_token) seperti punya Login Widget).
-// Referensi: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
 function parseTelegramInitData(initData) {
   if (!initData || typeof initData !== "string") {
     throw new Error("initData tidak valid");
@@ -111,9 +106,6 @@ app.post("/api/auth/telegram", async (req, res) => {
   }
 });
 
-// Bot dibuat sekali di sini (bukan cuma saat listen lokal) supaya endpoint
-// webhook di bawah bisa memprosesnya juga saat jalan sebagai serverless
-// function di Vercel (di mana app.listen()/bot.launch() tidak pernah dipanggil).
 let botInstance = null;
 function getBot() {
   if (!botInstance && BOT_TOKEN) {
@@ -122,8 +114,6 @@ function getBot() {
   return botInstance;
 }
 
-// Endpoint yang dipanggil Telegram sendiri (bukan dashboard), jadi TIDAK
-// boleh lewat requireAuthenticatedUser di bawah — makanya didaftarkan di sini.
 app.post("/api/telegram-webhook", async (req, res) => {
   const bot = getBot();
   if (!bot) {
@@ -180,10 +170,6 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Internal server error" });
 });
 
-// app.listen() dan bot.launch() (polling) HANYA untuk development lokal.
-// Di Vercel, file ini di-import oleh api/index.js sebagai module (tidak
-// dijalankan langsung), jadi blok ini otomatis dilewati — bot di Vercel
-// jalan lewat webhook (endpoint /api/telegram-webhook di atas), bukan polling.
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Dashboard API running at http://localhost:${PORT}`);
