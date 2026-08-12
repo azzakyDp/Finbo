@@ -1,8 +1,3 @@
-// src/services/sessionService.js
-// Session token dashboard disimpan di Supabase (bukan memori proses),
-// supaya tidak hilang saat server restart dan aman untuk deploy serverless
-// (Vercel) nanti, di mana tiap request bisa ditangani proses berbeda.
-
 const crypto = require("crypto");
 const { getClient } = require("../config/supabase");
 
