@@ -152,12 +152,12 @@ function createBot() {
   bot.command("dashboard", async (ctx) => {
     const url = process.env.DASHBOARD_URL;
     if (!url) {
-      return ctx.reply("⚠️ DASHBOARD_URL belum diset di .env — minta admin mengisinya dulu.");
+      return ctx.reply("DASHBOARD_URL belum diset di .env — minta admin mengisinya dulu.");
     }
     if (!url.startsWith("https://")) {
-      return ctx.reply("⚠️ DASHBOARD_URL harus HTTPS supaya Telegram mau membukanya sebagai Web App.");
+      return ctx.reply("DASHBOARD_URL harus HTTPS supaya Telegram mau membukanya sebagai Web App.");
     }
-    return ctx.reply("📊 Buka dashboard kamu:", {
+    return ctx.reply("Buka dashboard:", {
       reply_markup: {
         inline_keyboard: [[{ text: "Buka Dashboard", web_app: { url } }]],
       },
@@ -309,7 +309,7 @@ function createBot() {
       await ctx.reply(
         `*Pengeluaran ${title}*\n\n` +
         `Total biaya: *${formatRupiah(total)}*\n` +
-        `🧾 Jumlah transaksi: ${expenses.length}\n\n` +
+        `Jumlah transaksi: ${expenses.length}\n\n` +
         `*Barang & biaya:*\n${lines.join("\n")}`,
         { parse_mode: "Markdown" }
       );
@@ -335,24 +335,24 @@ function createBot() {
 
     await ctx.reply(
       "Mau lihat yang mana?\n\n" +
-      "• /cek_pengeluaran mingguan\n" +
-      "• /cek_pengeluaran bulanan"
+      "• /cek_pengeluaran_minggu_ini\n" +
+      "• /cek_pengeluaran_bulan_ini"
     );
   });
 
   // Alias agar lebih natural
-  bot.command("pengeluaran_mingguan", (ctx) =>
+  bot.command("pengeluaran_minggu_ini", (ctx) =>
     sendExpenseReport(ctx, "weekly")
   );
-  bot.command("pengeluaran_bulanan", (ctx) =>
+  bot.command("pengeluaran_bulan_ini", (ctx) =>
     sendExpenseReport(ctx, "monthly")
   );
 
   bot.command("rekap", async (ctx) => {
     await ctx.reply(
       "Untuk rekap pengeluaran, gunakan:\n" +
-      "/cek_pengeluaran mingguan\n" +
-      "/cek_pengeluaran bulanan"
+      "/cek_pengeluaran_minggu_ini\n" +
+      "/cek_pengeluaran_bulan_ini"
     );
   });
 
@@ -366,7 +366,7 @@ function createBot() {
       if (!deleted) {
         return ctx.reply("Belum ada transaksi yang bisa dibatalkan.");
       }
-      await ctx.reply(`🗑️ Transaksi #${deleted.id} sudah dibatalkan.`);
+      await ctx.reply(`Transaksi #${deleted.id} sudah dibatalkan.`);
     } catch (err) {
       console.error(err);
       await ctx.reply(" Gagal membatalkan transaksi: " + err.message);
@@ -399,7 +399,7 @@ function createBot() {
       setSession(ctx.chat.id, session);
 
       return ctx.reply(
-        "Sip, sudah Saya catat nominalnya. 👍\n" +
+        "Sip, sudah Saya catat nominalnya.\n" +
         "Uangnya dari mana? " +
         (session.note
           ? `Saya tangkap sebagai *${session.note}*.\n\n`
