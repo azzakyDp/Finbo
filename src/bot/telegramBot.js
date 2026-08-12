@@ -29,24 +29,6 @@ function todayLabel() {
 }
 
 const MENU_TEXT = `*MENU BOT RAN*
-  /pemasukan
-Tambah uang masuk ke saldo.
-
-/pengeluaran
-Catat barang dan harga yang dibeli.
-
-/cek_saldo
-Lihat saldo, total pemasukan, dan pengeluaran.
-
-/cek_pengeluaran
-Lihat pengeluaran mingguan atau bulanan, lengkap dengan total biaya dan daftar barang.
-
-/menu
-Tampilkan menu ini.
-
-/undo
-Batalkan transaksi terakhir.
-
 /dashboard 
 Dashboard keuangan
 
