@@ -12,7 +12,7 @@ export default function Sidebar({ active, onNavigate }) {
   return (
     <aside className={styles.sidebar}>
       <div className={styles.brand}>
-        <span className={styles.brandMark}>Rn</span>
+        <span className={styles.brandMark}>R</span>
         <span className={styles.brandName}>Ran</span>
       </div>
 
