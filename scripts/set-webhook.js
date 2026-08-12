@@ -25,11 +25,11 @@ async function main() {
   await bot.telegram.setWebhook(webhookUrl);
   const info = await bot.telegram.getWebhookInfo();
 
-  console.log("✅ Webhook terdaftar:", webhookUrl);
+  console.log("Webhook terdaftar:", webhookUrl);
   console.log(info);
 }
 
 main().catch((err) => {
-  console.error("❌ Gagal set webhook:", err.message);
+  console.error("Gagal set webhook:", err.message);
   process.exit(1);
 });
