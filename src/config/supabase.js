@@ -1,9 +1,4 @@
-// src/config/supabase.js
-// Koneksi ke Supabase. Isi SUPABASE_URL & SUPABASE_KEY di .env setelah
-// project Supabase kamu dibuat. Sebelum itu, service layer yang memakai
-// client ini akan melempar error yang jelas (bukan gagal diam-diam).
-
-require("dotenv").config();
+// Koneksi ke Supabase.
 const { createClient } = require("@supabase/supabase-js");
 
 const SUPABASE_URL = process.env.SUPABASE_URL;
