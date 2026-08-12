@@ -69,7 +69,7 @@ function getSession(chatId) {
 function parseAmountAndNote(text) {
   const raw = String(text || "").trim();
 
-  // 500000 gaji
+  // parse-message: 500000 gaji
   let m = raw.match(/^rp?\s*([\d.,]+)\s*(?:[|=-]\s*)?(.*)$/i);
   if (m) {
     const amount = parserService.toNumber(m[1]);
@@ -79,7 +79,7 @@ function parseAmountAndNote(text) {
     }
   }
 
-  // gaji 500000
+  // parse-message: gaji 500000
   m = raw.match(/^(.*?)\s+rp?\s*([\d.,]+)$/i);
   if (m) {
     const amount = parserService.toNumber(m[2]);
@@ -158,6 +158,16 @@ function createBot() {
   bot.command("menu", async (ctx) => {
     clearSession(ctx.chat.id);
     await ctx.replyWithMarkdown(MENU_TEXT);
+
+    try {
+      clearSession(ctx.chat.id);
+
+      await ctx.replyWithMarkdown(MENU_TEXT);
+
+      console.log("Reply berhasil dikirim");
+    } catch (error) {
+      console.error("Reply gagal dikirim:", error);
+    }
   });
 
   // =========================
