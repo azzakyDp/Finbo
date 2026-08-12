@@ -1,13 +1,3 @@
-// src/bot/telegramBot.js
-// Telegram bot untuk pencatatan keuangan dengan alur percakapan sederhana.
-// Command utama:
-// /pemasukan       -> tambah pemasukan
-// /pengeluaran     -> tambah pengeluaran
-// /cek_saldo       -> lihat saldo
-// /cek_pengeluaran -> lihat pengeluaran minggu/bulan
-// /menu            -> bantuan
-// /undo            -> batalkan transaksi terakhir
-
 require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const parserService = require("../services/parserService");
@@ -15,8 +5,6 @@ const txService = require("../services/transactionService");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
-// State percakapan disimpan di memory. Cocok untuk 1 instance bot.
-// Jika nanti deploy multi-instance/serverless, pindahkan state ke Redis/Supabase.
 const sessions = new Map();
 
 function formatRupiah(n) {
