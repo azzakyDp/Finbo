@@ -170,7 +170,7 @@ function createBot() {
 
   bot.command("menu", async (ctx) => {
     clearSession(ctx.chat.id);
-    await ctx.replyWithMarkdown(MENU_TEXT);
+    await ctx.reply(MENU_TEXT);
   });
 
   // =========================
@@ -536,7 +536,7 @@ function createBot() {
 
     // Fallback: parser transaksi lama tetap dipertahankan.
     if (parserService.isMenuCommand(text)) {
-      return ctx.replyWithMarkdown(MENU_TEXT);
+      return ctx.reply(MENU_TEXT);
     }
 
     const totalType = parserService.matchTotalCommand(text);
