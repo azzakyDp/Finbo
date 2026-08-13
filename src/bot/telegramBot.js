@@ -55,10 +55,10 @@ Mencatat pengeluaran barang/kebutuhan dan harga
 /cek_saldo 
 Mengecek saldo pemasukan
 
-/cek_pengeluaran_minggu_ini 
+/cek_pengeluaran_mingguan
 Mengecek total pengeluaran minggu ini
 
-/cek_pengeluaran_bulan_ini 
+/cek_pengeluaran_bulanan 
 Mengecek total pengeluaran bulan ini
 
 /undo 
