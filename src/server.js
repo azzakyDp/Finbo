@@ -5,7 +5,7 @@ const cors = require("cors");
 const path = require("path");
 const txService = require("./services/transactionService");
 const sessionService = require("./services/sessionService");
-const planningService = require("./services/planningService");
+const planningService = require("./services/planningServices");
 const { createBot } = require("./bot/telegramBot");
 
 const app = express();
@@ -180,10 +180,6 @@ app.post("/api/planning/:id/progress", async (req, res) => {
 
 app.use("/api", (req, res) => {
   res.status(404).json({ success: false, message: "Endpoint tidak ditemukan" });
-});
-
-app.use((err, req, res, next) => {
-  res.status(500).json({ success: false, message: "Internal server error" });
 });
 
 app.use((err, req, res, next) => {
