@@ -5,7 +5,7 @@ const cors = require("cors");
 const path = require("path");
 const txService = require("./services/transactionService");
 const sessionService = require("./services/sessionService");
-const planningService = require("./services/planningServices");
+const planningService = require("./services/planningService");
 const { createBot } = require("./bot/telegramBot");
 
 const app = express();
