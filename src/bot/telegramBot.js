@@ -173,9 +173,7 @@ function createBot() {
     await ctx.reply(MENU_TEXT);
   });
 
-  // =========================
   // PEMASUKAN
-  // =========================
   bot.command("pemasukan", async (ctx) => {
     const args = ctx.message.text.replace(/^\/pemasukan(?:@\w+)?/i, "").trim();
 
@@ -212,9 +210,7 @@ function createBot() {
     );
   });
 
-  // =========================
   // PENGELUARAN
-  // =========================
   bot.command("pengeluaran", async (ctx) => {
     const args = ctx.message.text.replace(/^\/pengeluaran(?:@\w+)?/i, "").trim();
 
@@ -255,9 +251,7 @@ function createBot() {
     );
   });
 
-  // =========================
   // CEK SALDO
-  // =========================
   const saldoHandler = async (ctx) => {
     try {
       clearSession(ctx.chat.id);
@@ -281,9 +275,7 @@ function createBot() {
   bot.command("saldo", saldoHandler);
   bot.command("cek", saldoHandler);
 
-  // =========================
   // REKAP PENGELUARAN
-  // =========================
   async function sendExpenseReport(ctx, range) {
     try {
       const user = await ensureUser(ctx);
@@ -339,30 +331,28 @@ function createBot() {
 
     await ctx.reply(
       "Mau lihat yang mana?\n\n" +
-      "• /cek_pengeluaran_minggu_ini\n" +
-      "• /cek_pengeluaran_bulan_ini"
+      "• /cek_pengeluaran_mingguan\n" +
+      "• /cek_pengeluaran_bulanan"
     );
   });
 
   // Alias agar lebih natural
-  bot.command("pengeluaran_minggu_ini", (ctx) =>
+  bot.command("cek_pengeluaran_mingguan", (ctx) =>
     sendExpenseReport(ctx, "weekly")
   );
-  bot.command("pengeluaran_bulan_ini", (ctx) =>
+  bot.command("cek_pengeluaran_bulanan", (ctx) =>
     sendExpenseReport(ctx, "monthly")
   );
 
   bot.command("rekap", async (ctx) => {
     await ctx.reply(
       "Untuk rekap pengeluaran, gunakan:\n" +
-      "/cek_pengeluaran_minggu_ini\n" +
-      "/cek_pengeluaran_bulan_ini"
+      "/cek_pengeluaran_mingguan\n" +
+      "/cek_pengeluaran_bulanan"
     );
   });
 
-  // =========================
   // UNDO
-  // =========================
   bot.command("undo", async (ctx) => {
     try {
       const user = await ensureUser(ctx);
@@ -376,6 +366,108 @@ function createBot() {
       await ctx.reply(" Gagal membatalkan transaksi: " + err.message);
     }
   });
+
+  // Planning tabungan
+  const TYPE_LABEL = { specific: "Tabungan Spesifik", saving: "Simpanan", emergency: "Dana Darurat" };
+  
+    bot.command("tabungan", async (ctx) => {
+      try {
+        const user = await ensureUser(ctx);
+        const items = await planningService.getPlanningItems(user.id);
+  
+        if (items.length === 0) {
+          return ctx.reply(
+            "Belum ada planning tabungan.\n\n" +
+            "Buat baru dengan format:\n" +
+            "`/buat_tabungan specific Laptop 8000000`\n" +
+            "`/buat_tabungan saving Simpanan Umum`\n" +
+            "`/buat_tabungan emergency Dana Darurat 15000000`"
+          );
+        }
+  
+        const lines = items.map((it) => {
+          const target = it.target_amount != null ? formatRupiah(it.target_amount) : "tanpa target";
+          const pct = it.target_amount ? Math.min(100, Math.round((it.saved_amount / it.target_amount) * 100)) : null;
+          const status = it.is_done ? " (selesai)" : "";
+          return `#${it.id} [${TYPE_LABEL[it.type]}] ${it.title}${status}\n` +
+            `   ${formatRupiah(it.saved_amount)} / ${target}` + (pct != null ? ` (${pct}%)` : "");
+        });
+  
+        await ctx.reply(
+          `Planning Tabungan\n\n${lines.join("\n\n")}\n\n` +
+          "Nabung ke salah satu: /nabung <id> <jumlah>\n" +
+          "Contoh: /nabung 3 100000"
+        );
+      } catch (err) {
+        console.error(err);
+        await ctx.reply(" Gagal mengambil data tabungan: " + err.message);
+      }
+    });
+  
+    bot.command("buat_tabungan", async (ctx) => {
+      const args = ctx.message.text.replace(/^\/buat_tabungan(?:@\w+)?/i, "").trim();
+      const parts = args.split(/\s+/);
+      const type = parts[0];
+  
+      if (!["specific", "saving", "emergency"].includes(type)) {
+        return ctx.reply(
+          "Format: `/buat_tabungan <tipe> <nama> <target opsional>`\n" +
+          "Tipe: `specific`, `saving`, atau `emergency`\n\n" +
+          "Contoh:\n" +
+          "`/buat_tabungan specific Laptop 8000000`\n" +
+          "`/buat_tabungan saving Simpanan Umum`"
+        );
+      }
+  
+      // Angka terakhir (kalau ada) dianggap target, sisanya nama.
+      const rest = parts.slice(1);
+      let targetAmount = null;
+      let titleParts = rest;
+      const last = rest[rest.length - 1];
+      if (last && /^\d+$/.test(last)) {
+        targetAmount = last;
+        titleParts = rest.slice(0, -1);
+      }
+      const title = titleParts.join(" ").trim();
+  
+      try {
+        const user = await ensureUser(ctx);
+        const item = await planningService.createPlanningItem(user.id, { type, title, targetAmount });
+        await ctx.reply(
+          `Planning baru dibuat: ${item.title} (${TYPE_LABEL[item.type]})\n` +
+          `ID: #${item.id}` +
+          (item.target_amount != null ? `\nTarget: ${formatRupiah(item.target_amount)}` : "")
+        );
+      } catch (err) {
+        console.error(err);
+        await ctx.reply(" Gagal membuat planning: " + err.message);
+      }
+    });
+  
+    bot.command("nabung", async (ctx) => {
+      const args = ctx.message.text.replace(/^\/nabung(?:@\w+)?/i, "").trim();
+      const [idStr, amountStr] = args.split(/\s+/);
+      const id = Number(idStr);
+      const amount = parserService.toNumber(amountStr);
+  
+      if (!id || !Number.isFinite(amount)) {
+        return ctx.reply("Format: `/nabung <id> <jumlah>`\nContoh: `/nabung 3 100000`");
+      }
+  
+      try {
+        const user = await ensureUser(ctx);
+        const item = await planningService.addProgress(user.id, id, amount);
+        const target = item.target_amount != null ? formatRupiah(item.target_amount) : "tanpa target";
+        await ctx.reply(
+          `Berhasil nabung ${formatRupiah(amount)} ke ${item.title}.\n` +
+          `Progress: ${formatRupiah(item.saved_amount)} / ${target}` +
+          (item.is_done ? "\nTarget tercapai!" : "")
+        );
+      } catch (err) {
+        console.error(err);
+        await ctx.reply(" Gagal mencatat progress: " + err.message);
+      }
+    });
 
   // =========================
   // PESAN TEKS + STATE

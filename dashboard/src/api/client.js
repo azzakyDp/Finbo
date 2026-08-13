@@ -106,6 +106,33 @@ export async function deleteTransaction(id) {
   return requestJson(`/api/transaction/${id}`, { method: "DELETE" });
 }
 
+// PLANNING API
+export async function fetchPlanningItems(type = null) {
+  const qs = type ? `?type=${encodeURIComponent(type)}` : "";
+  const json = await requestJson(`/api/planning${qs}`);
+  return json.data || [];
+}
+
+export async function createPlanningItem(payload) {
+  const json = await requestJson(`/api/planning`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return json.data || null;
+}
+
+export async function addPlanningProgress(id, amount) {
+  const json = await requestJson(`/api/planning/${id}/progress`, {
+    method: "POST",
+    body: JSON.stringify({ amount }),
+  });
+  return json.data || null;
+}
+
+export async function deletePlanningItem(id) {
+  return requestJson(`/api/planning/${id}`, { method: "DELETE" });
+}
+
 export function exportUrl() {
   return `/api/export`;
 }

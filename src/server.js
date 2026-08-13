@@ -5,6 +5,7 @@ const cors = require("cors");
 const path = require("path");
 const txService = require("./services/transactionService");
 const sessionService = require("./services/sessionService");
+const planningService = require("./services/planningService");
 const { createBot } = require("./bot/telegramBot");
 
 const app = express();
@@ -115,17 +116,13 @@ function getBot() {
 }
 
 app.post("/api/telegram-webhook", async (req, res) => {
-  const bot = getBot();
-  if (!bot) {
-    console.error(" Bot gagal dibuat — cek TELEGRAM_BOT_TOKEN di Vercel env");
-    return res.status(200).end();
-  }
-
   try {
-    console.log("Update masuk", JSON.stringify(req.body).slice(0, 200));
+    const bot = getBot();
+
+    if (!bot) return res.status(500).json({ success: false, message: "Bot belum diinisialisasi" });
     await bot.handleUpdate(req.body);
   } catch (err) {
-    console.error("Gagal handle update:", err.message, err.stack);
+    console.error("Webhook error:", err.message);
   }
 
   res.status(200).end();
@@ -162,8 +159,31 @@ app.delete("/api/transaction/:id", async (req, res) => {
   }
 });
 
+app.get("/api/planning", async (req, res) => {
+  try {
+    const data = await planningService.createPlanningItem(req.authenticatedUserId, req.body || {});
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
+app.post("/api/planning/:id/progress", async (req, res) => {
+  try {
+    const { amount } = req.body || {};
+    const data = await planningService.addProgress(req.authenticatedUserId, req.params.id, amount);
+    res.json({ success: true, data });
+  } catch (err) {
+    res.status(400).json({ success: false, message: err.message });
+  }
+});
+
 app.use("/api", (req, res) => {
   res.status(404).json({ success: false, message: "Endpoint tidak ditemukan" });
+});
+
+app.use((err, req, res, next) => {
+  res.status(500).json({ success: false, message: "Internal server error" });
 });
 
 app.use((err, req, res, next) => {

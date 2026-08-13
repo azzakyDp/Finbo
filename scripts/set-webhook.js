@@ -1,4 +1,3 @@
-// scripts/set-webhook.js
 // Jalankan SEKALI setelah tiap deploy Vercel (atau kalau domain berubah):
 //   node scripts/set-webhook.js
 //
