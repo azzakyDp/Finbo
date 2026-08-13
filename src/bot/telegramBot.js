@@ -10,6 +10,7 @@ require("dotenv").config();
 const { Telegraf } = require("telegraf");
 const parserService = require("../services/parserService");
 const txService = require("../services/transactionService");
+const planningService = require("../services/planningService");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
