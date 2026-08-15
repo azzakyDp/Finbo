@@ -1,5 +1,4 @@
--- 001_init_schema.sql
--- Skema awal Bot Kos v2
+-- Skema Finbo --
 
 create extension if not exists "pgcrypto";
 
@@ -44,8 +43,7 @@ create table if not exists category_budgets (
   updated_at timestamptz default now()
 );
 
--- sessions: token dashboard hasil login Telegram WebApp, source of truth
--- di Supabase (bukan memori proses) supaya aman di-restart/serverless.
+-- sessions: token dashboard hasil login Telegram WebApp
 create table if not exists sessions (
   token text primary key,
   user_id uuid references users(id) on delete cascade,
