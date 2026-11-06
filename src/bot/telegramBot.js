@@ -42,33 +42,42 @@ function todayLabel() {
 
 const MENU_TEXT = `*MENU BOT RAN*
 /menu
-Menampilkan menu list perintah
+Menampilkan daftar perintah
 
 /dashboard 
-Dashboard keuangan
+Buka dashboard keuangan di browser
 
 /pemasukan
-Tambah saldo
+Catat uang masuk / tambah saldo dompet
 
 /pengeluaran
-Mencatat pengeluaran barang/kebutuhan dan harga
+Catat belanja / pengeluaran dari dompet utama
 
 /cek_saldo 
-Mengecek saldo pemasukan
+Cek sisa saldo dompet saat ini
 
 /cek_pengeluaran_mingguan
-Mengecek total pengeluaran minggu ini
+Lihat ringkasan total pengeluaran minggu ini
 
 /cek_pengeluaran_bulanan 
-Mengecek total pengeluaran bulan ini
+Lihat ringkasan total pengeluaran bulan ini
 
 /undo 
-Membatalkan transaksi terakhir
+Batalkan transaksi terakhir (dompet atau tabungan)
+
+/tabungan
+Lihat daftar dan progres semua tabunganmu
+
+/buat_tabungan
+Bikin pos tabungan baru (misal: simpanan, target beli barang, dana darurat)
+
+/nabung
+Setor uang ke pos tabungan tertentu
 
 /pengeluaran_tabungan
-Mencatat pengeluaran darurat dengan mengambil sisa kekurangan dari tabungan
+Belanja darurat saat saldo dompet menipis (< Rp30rb), kekurangannya otomatis diambil dari tabungan
 
-Kamu juga bisa mengetik format langsung, misalnya:
+Kamu juga bisa langsung ketik:
 pemasukan = 500000 gaji
 pengeluaran = 25000 makan + 10000 parkir`;
 
