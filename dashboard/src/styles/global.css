@@ -1,22 +1,28 @@
 :root {
-  --ink: #161B22;
-  --ink-soft: #232B36;
-  --paper: #F4F0E6;
-  --paper-dim: #EDE8D9;
-  --teal: #3FA796;
-  --terracotta: #E2654B;
-  --gray: #8B94A3;
-  --gray-dark: #3A4250;
-  --line: #DDD6C4;
+  --ink: #161b22;
+  --ink-soft: #232b36;
+  --paper: #f4f0e6;
+  --paper-dim: #ede8d9;
+  --teal: #3fa796;
+  --terracotta: #e2654b;
+  --gray: #8b94a3;
+  --gray-dark: #3a4250;
+  --line: #ddd6c4;
 
-  --font-display: 'Fraunces', serif;
-  --font-body: 'Inter', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-display: "Fraunces", serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-html, body, #root { height: 100%; }
+html,
+body,
+#root {
+  height: 100%;
+}
 
 body {
   margin: 0;
@@ -26,5 +32,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-button { font-family: inherit; }
-table { font-family: inherit; }
+button {
+  font-family: inherit;
+}
+
+table {
+  font-family: inherit;
+}

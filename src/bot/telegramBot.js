@@ -11,6 +11,7 @@ const { Telegraf } = require("telegraf");
 const parserService = require("../services/parserService");
 const txService = require("../services/transactionService");
 const planningService = require("../services/planningService");
+const { SAVINGS_WITHDRAW_THRESHOLD } = require("../config/constants");
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
@@ -63,6 +64,9 @@ Mengecek total pengeluaran bulan ini
 
 /undo 
 Membatalkan transaksi terakhir
+
+/pengeluaran_tabungan
+Mencatat pengeluaran darurat dengan mengambil sisa kekurangan dari tabungan
 
 Kamu juga bisa mengetik format langsung, misalnya:
 pemasukan = 500000 gaji
@@ -357,6 +361,17 @@ function createBot() {
   bot.command("undo", async (ctx) => {
     try {
       const user = await ensureUser(ctx);
+      const lastTx = await txService.getLastTransaction(user.id);
+      if (!lastTx) {
+        return ctx.reply("Belum ada transaksi yang bisa dibatalkan.");
+      }
+
+      if (lastTx.withdrawal_id) {
+        const res = await planningService.undoWithdrawal(user.id, lastTx.withdrawal_id);
+        const restoredFormatted = formatRupiah(res?.restored || 0);
+        return ctx.reply(`Penarikan tabungan dibatalkan, ${restoredFormatted} dikembalikan ke tabungan`);
+      }
+
       const deleted = await txService.deleteLastTransaction(user.id);
       if (!deleted) {
         return ctx.reply("Belum ada transaksi yang bisa dibatalkan.");
@@ -467,6 +482,100 @@ function createBot() {
       } catch (err) {
         console.error(err);
         await ctx.reply(" Gagal mencatat progress: " + err.message);
+      }
+    });
+
+    bot.command("pengeluaran_tabungan", async (ctx) => {
+      try {
+        const rawArgs = ctx.message.text.replace(/^\/pengeluaran_tabungan(?:@\w+)?/i, "").trim();
+        if (!rawArgs) {
+          return ctx.reply(
+            "Format: /pengeluaran_tabungan [#id] <barang harga + barang harga>\n" +
+            "Contoh: /pengeluaran_tabungan beras 50000\n" +
+            "Contoh dengan id tabungan: /pengeluaran_tabungan #3 beras 50000 + obat 20000"
+          );
+        }
+
+        let explicitPlanningId = null;
+        let cleanedArgs = rawArgs;
+
+        const idMatch = rawArgs.match(/^#(\d+)\s*/);
+        if (idMatch) {
+          explicitPlanningId = Number(idMatch[1]);
+          cleanedArgs = rawArgs.slice(idMatch[0].length).trim();
+        }
+
+        if (!cleanedArgs) {
+          return ctx.reply("Silakan sertakan daftar barang dan harga pengeluaran.");
+        }
+
+        const parsed = parserService.parseMessage(`pengeluaran ${cleanedArgs}`);
+        if (!parsed.ok || !parsed.items || parsed.items.length === 0) {
+          return ctx.reply("Format pengeluaran tidak terbaca. Contoh: /pengeluaran_tabungan beras 50000");
+        }
+
+        const user = await ensureUser(ctx);
+        const savingItems = await planningService.getSavingItems(user.id);
+
+        if (!savingItems || savingItems.length === 0) {
+          return ctx.reply(
+            "Kamu belum memiliki tabungan bertipe simpanan.\n" +
+            "Buat terlebih dahulu dengan: /buat_tabungan saving <nama>"
+          );
+        }
+
+        let targetPlanning = null;
+        if (explicitPlanningId != null) {
+          targetPlanning = savingItems.find((item) => Number(item.id) === explicitPlanningId);
+          if (!targetPlanning) {
+            return ctx.reply(`Tabungan simpanan dengan ID #${explicitPlanningId} tidak ditemukan.`);
+          }
+        } else if (savingItems.length === 1) {
+          targetPlanning = savingItems[0];
+        } else {
+          const listText = savingItems
+            .map((item) => `• #${item.id} ${item.title}: ${formatRupiah(item.saved_amount)}`)
+            .join("\n");
+          return ctx.reply(
+            "Kamu memiliki beberapa tabungan simpanan. Silakan tentukan ID tabungan:\n\n" +
+            listText + "\n\n" +
+            "Gunakan: /pengeluaran_tabungan #<id> " + cleanedArgs
+          );
+        }
+
+        const totals = await txService.getTotals(user.id);
+        if (totals.saldo >= SAVINGS_WITHDRAW_THRESHOLD) {
+          return ctx.reply(
+            `Saldo biasa kamu saat ini (${formatRupiah(totals.saldo)}) masih di atas batas minimum (${formatRupiah(SAVINGS_WITHDRAW_THRESHOLD)}).\n` +
+            "Silakan gunakan /pengeluaran biasa."
+          );
+        }
+
+        const withdrawal = await planningService.withdrawForExpense(user.id, {
+          planningId: targetPlanning.id,
+          items: parsed.items,
+          date: parsed.date || new Date(),
+        });
+
+        const newTotals = await txService.getTotals(user.id);
+
+        const itemsList = parsed.items
+          .map((item) => `- ${item.note || "Tanpa keterangan"}: ${formatRupiah(item.amount)}`)
+          .join("\n");
+
+        const replyMessage =
+          `Pengeluaran dari tabungan berhasil dicatat!\n\n` +
+          `Barang:\n${itemsList}\n\n` +
+          `Total pengeluaran: ${formatRupiah(withdrawal.total)}\n` +
+          `Saldo terpakai: ${formatRupiah(withdrawal.saldo_used)}\n` +
+          `Diambil dari tabungan (${targetPlanning.title}): ${formatRupiah(withdrawal.from_savings)}\n` +
+          `Sisa tabungan: ${formatRupiah(withdrawal.saved_after)}\n` +
+          `Saldo sekarang: ${formatRupiah(newTotals.saldo)}`;
+
+        await ctx.reply(replyMessage);
+      } catch (err) {
+        console.error("Error /pengeluaran_tabungan:", err);
+        await ctx.reply(`Gagal mencatat pengeluaran dari tabungan: ${err.message}`);
       }
     });
 

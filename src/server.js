@@ -152,6 +152,14 @@ app.get("/api/total", async (req, res) => {
 
 app.delete("/api/transaction/:id", async (req, res) => {
   try {
+    const tx = await txService.getTransactionById(req.authenticatedUserId, req.params.id);
+    if (tx && tx.withdrawal_id) {
+      return res.status(409).json({
+        success: false,
+        message: "Bagian dari penarikan tabungan, batalkan lewat /undo",
+      });
+    }
+
     const deleted = await txService.deleteTransactionById(req.authenticatedUserId, req.params.id);
     res.json({ success: true, message: deleted ? `Transaksi #${req.params.id} dihapus.` : `Transaksi #${req.params.id} tidak ditemukan.` });
   } catch (err) {

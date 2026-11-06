@@ -15,7 +15,7 @@ export default function ReceiptList({ transactions }) {
             <span className={styles.date}>{fmtDate(t.date)}</span>
             <span>
               <span className={styles.note}>{t.note}</span>
-              <span className={styles.cat}>{t.category || "Tanpa kategori"}</span>
+              <span className={styles.cat}>{t.category === "tarik_tabungan" ? "Dari tabungan" : (t.category || "Tanpa kategori")}</span>
             </span>
             <span className={`${styles.amount} ${t.type === "pemasukan" ? styles.in : styles.out}`}>
               {t.type === "pemasukan" ? "+" : "−"}{fmtRp(t.amount)}

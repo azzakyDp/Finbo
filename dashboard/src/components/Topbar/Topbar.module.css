@@ -4,6 +4,7 @@
   justify-content: space-between;
   margin-bottom: 28px;
 }
+
 .title {
   font-family: var(--font-display);
   font-size: 28px;
@@ -11,6 +12,7 @@
   margin: 0;
   color: var(--ink);
 }
+
 .exportBtn {
   display: flex;
   align-items: center;
@@ -24,6 +26,9 @@
   font-weight: 600;
   cursor: pointer;
   text-decoration: none;
-  transition: transform .12s;
+  transition: transform 0.12s;
 }
-.exportBtn:hover { transform: translateY(-1px); }
+
+.exportBtn:hover {
+  transform: translateY(-1px);
+}

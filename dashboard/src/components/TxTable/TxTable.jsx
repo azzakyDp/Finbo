@@ -12,7 +12,17 @@ const FILTERS = [
 
 export default function TxTable({ transactions, onDelete }) {
   const [filter, setFilter] = useState("all");
+  const [deleteError, setDeleteError] = useState("");
   const now = new Date();
+
+  async function handleDeleteClick(id) {
+    try {
+      setDeleteError("");
+      await onDelete?.(id);
+    } catch (err) {
+      setDeleteError(err.message || "Gagal menghapus transaksi");
+    }
+  }
 
   let rows = [...transactions];
   if (filter === "daily") rows = rows.filter((t) => new Date(t.date).toDateString() === now.toDateString());
@@ -32,6 +42,7 @@ export default function TxTable({ transactions, onDelete }) {
           ))}
         </div>
       </div>
+      {deleteError && <div className={styles.errorBanner}>{deleteError}</div>}
       <table className={styles.table}>
         <thead>
           <tr><th>Tanggal</th><th>Catatan</th><th>Kategori</th><th className={styles.num}>Jumlah</th><th></th></tr>
@@ -41,12 +52,12 @@ export default function TxTable({ transactions, onDelete }) {
             <tr key={t.id}>
               <td>{fmtDate(t.date)}</td>
               <td>{t.note}</td>
-              <td>{t.category || "-"}</td>
+              <td>{t.category === "tarik_tabungan" ? "Dari tabungan" : (t.category || "-")}</td>
               <td className={`${styles.num} ${t.type === "pemasukan" ? styles.in : styles.out}`}>
                 {t.type === "pemasukan" ? "+" : "−"}{fmtRp(t.amount)}
               </td>
               <td>
-                <button className={styles.del} title="Hapus" onClick={() => onDelete?.(t.id)}>
+                <button className={styles.del} title="Hapus" onClick={() => handleDeleteClick(t.id)}>
                   <TrashIcon size={14} />
                 </button>
               </td>

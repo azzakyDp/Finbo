@@ -1,4 +1,6 @@
 const { getClient } = require("../config/supabase");
+const { toDateOnlyString } = require("./dateUtils");
+const { SAVINGS_WITHDRAW_THRESHOLD } = require("../config/constants");
 
 const ALLOWED_TYPES = ["specific", "saving", "emergency"];
 
@@ -22,6 +24,59 @@ async function getPlanningItems(userId, type = null) {
   const { data, error } = await query;
   if (error) throw error;
   return data || [];
+}
+
+async function getSavingItems(userId) {
+  return getPlanningItems(userId, "saving");
+}
+
+async function withdrawForExpense(userId, { planningId, items, date }) {
+  const supabase = getClient();
+  const normalizedDate = toDateOnlyString(date instanceof Date ? date : new Date(date || Date.now()));
+
+  try {
+    const { data, error } = await supabase.rpc("withdraw_savings_for_expense", {
+      p_user_id: userId,
+      p_planning_id: planningId,
+      p_date: normalizedDate,
+      p_items: items,
+      p_threshold: SAVINGS_WITHDRAW_THRESHOLD,
+    });
+
+    if (error) {
+      // Error dari Postgres/RPC (RAISE EXCEPTION membawa error.message berbahasa Indonesia)
+      throw new Error(error.message || "Gagal melakukan penarikan tabungan.");
+    }
+
+    return data;
+  } catch (err) {
+    if (err && err.message) {
+      throw err;
+    }
+    throw new Error("Gagal melakukan penarikan tabungan.");
+  }
+}
+
+async function undoWithdrawal(userId, withdrawalId) {
+  const supabase = getClient();
+
+  try {
+    const { data, error } = await supabase.rpc("undo_savings_withdrawal", {
+      p_user_id: userId,
+      p_withdrawal_id: withdrawalId,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Gagal membatalkan penarikan tabungan.");
+    }
+
+    return data;
+  } catch (err) {
+    if (err && err.message) {
+      throw err;
+    }
+    throw new Error("Gagal membatalkan penarikan tabungan.");
+  }
 }
 
 async function createPlanningItem(userId, payload) {
@@ -115,6 +170,9 @@ async function deletePlanningItem(userId, id) {
 module.exports = {
   ALLOWED_TYPES,
   getPlanningItems,
+  getSavingItems,
+  withdrawForExpense,
+  undoWithdrawal,
   createPlanningItem,
   addProgress,
   deletePlanningItem,

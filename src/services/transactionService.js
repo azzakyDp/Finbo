@@ -107,7 +107,11 @@ async function getTotals(userId, range = "all") {
   const rows = await getTransactions(userId, range);
 
   const totalPemasukan = rows
-    .filter((r) => r.type === "pemasukan")
+    .filter((r) => r.type === "pemasukan" && r.category !== "tarik_tabungan")
+    .reduce((s, r) => s + Number(r.amount), 0);
+
+  const totalDariTabungan = rows
+    .filter((r) => r.type === "pemasukan" && r.category === "tarik_tabungan")
     .reduce((s, r) => s + Number(r.amount), 0);
 
   const totalPengeluaran = rows
@@ -116,8 +120,9 @@ async function getTotals(userId, range = "all") {
 
   return {
     totalPemasukan,
+    totalDariTabungan,
     totalPengeluaran,
-    saldo: totalPemasukan - totalPengeluaran,
+    saldo: totalPemasukan + totalDariTabungan - totalPengeluaran,
   };
 }
 
@@ -140,6 +145,20 @@ async function getExpenseReport(userId, range) {
     count: items.length,
     items,
   };
+}
+
+async function getLastTransaction(userId) {
+  const supabase = getClient();
+
+  const { data: rows, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) throw error;
+  return rows && rows.length > 0 ? rows[0] : null;
 }
 
 async function deleteLastTransaction(userId) {
@@ -165,6 +184,19 @@ async function deleteLastTransaction(userId) {
   return rows[0];
 }
 
+async function getTransactionById(userId, id) {
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
 async function deleteTransactionById(userId, id) {
   const supabase = getClient();
   const { error } = await supabase
@@ -184,6 +216,8 @@ module.exports = {
   getTransactions,
   getTotals,
   getExpenseReport,
+  getLastTransaction,
+  getTransactionById,
   deleteLastTransaction,
   deleteTransactionById,
 };
