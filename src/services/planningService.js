@@ -66,6 +66,34 @@ async function withdrawForExpense(userId, { planningId, items, date }) {
   }
 }
 
+async function withdrawDirect(userId, { planningId, amount, note = "Tarik tabungan" }) {
+  const supabase = getClient();
+  const numAmount = Number(amount);
+  if (!Number.isFinite(numAmount) || numAmount <= 0) {
+    throw new Error("Nominal penarikan tidak valid.");
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("withdraw_savings_direct", {
+      p_user_id: userId,
+      p_planning_id: planningId,
+      p_amount: numAmount,
+      p_note: note,
+    });
+
+    if (error) {
+      throw new Error(error.message || "Gagal melakukan penarikan tabungan.");
+    }
+
+    return data;
+  } catch (err) {
+    if (err && err.message) {
+      throw err;
+    }
+    throw new Error("Gagal melakukan penarikan tabungan.");
+  }
+}
+
 async function undoWithdrawal(userId, withdrawalId) {
   const supabase = getClient();
 
@@ -95,8 +123,21 @@ async function createPlanningItem(userId, payload) {
   if (!ALLOWED_TYPES.includes(type)) {
     throw new Error("Jenis planning tidak valid.");
   }
-  if (!title?.trim()) {
+  const cleanTitle = title?.trim();
+  if (!cleanTitle) {
     throw new Error("Nama planning wajib diisi.");
+  }
+
+  // Cek duplikasi nama tabungan/planning yang masih aktif
+  const { data: existingTitles, error: checkErr } = await supabase
+    .from("planning_items")
+    .select("id, title")
+    .eq("user_id", userId)
+    .ilike("title", cleanTitle);
+
+  if (checkErr) throw checkErr;
+  if (existingTitles && existingTitles.length > 0) {
+    throw new Error(`Tabungan dengan nama "${cleanTitle}" sudah ada. Gunakan nama lain untuk membedakannya.`);
   }
 
   let target = null;
@@ -181,6 +222,7 @@ module.exports = {
   getPlanningItems,
   getSavingItems,
   withdrawForExpense,
+  withdrawDirect,
   undoWithdrawal,
   createPlanningItem,
   addProgress,

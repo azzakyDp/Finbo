@@ -40,44 +40,30 @@ function todayLabel() {
   });
 }
 
-const MENU_TEXT = `*MENU BOT RAN*
-/menu
-Menampilkan daftar perintah
+const MENU_TEXT = `MENU BOT FINBO
 
-/dashboard 
-Buka dashboard keuangan di browser
+TRANSAKSI
+/pemasukan — Tambah pemasukan
+/pengeluaran — Catat pengeluaran
+/pengeluaran_tabungan — Catat pengeluaran darurat, kekurangan diambil dari tabungan
+/tarik_tabungan — Tarik tabungan/dana darurat ke dompet
+/undo — Batalkan transaksi terakhir
 
-/pemasukan
-Catat uang masuk / tambah saldo dompet
+CEK & REKAP
+/cek_saldo — Lihat saldo, pemasukan, dan pengeluaran
+/cek_pengeluaran_mingguan — Rekap 7 hari terakhir
+/cek_pengeluaran_bulanan — Rekap bulan berjalan
 
-/pengeluaran
-Catat belanja / pengeluaran dari dompet utama
+TABUNGAN
+/tabungan — Lihat semua planning tabungan
+/buat_tabungan — Buat planning tabungan baru
+/nabung — Tambah progress tabungan
 
-/cek_saldo 
-Cek sisa saldo dompet saat ini
+LAINNYA
+/dashboard — Buka dashboard keuangan
+/menu — Tampilkan menu ini
 
-/cek_pengeluaran_mingguan
-Lihat ringkasan total pengeluaran minggu ini
-
-/cek_pengeluaran_bulanan 
-Lihat ringkasan total pengeluaran bulan ini
-
-/undo 
-Batalkan transaksi terakhir (dompet atau tabungan)
-
-/tabungan
-Lihat daftar dan progres semua tabunganmu
-
-/buat_tabungan
-Bikin pos tabungan baru (misal: simpanan, target beli barang, dana darurat)
-
-/nabung
-Setor uang ke pos tabungan tertentu
-
-/pengeluaran_tabungan
-Belanja darurat saat saldo dompet menipis (< Rp30rb), kekurangannya otomatis diambil dari tabungan
-
-Kamu juga bisa langsung ketik:
+Format cepat tanpa command:
 pemasukan = 500000 gaji
 pengeluaran = 25000 makan + 10000 parkir`;
 
@@ -164,6 +150,11 @@ function createBot() {
     );
   });
 
+  bot.command("batal", async (ctx) => {
+    clearSession(ctx.chat.id);
+    return ctx.reply("Operasi dibatalkan.");
+  });
+
   // Satu-satunya cara resmi Telegram mengisi window.Telegram.WebApp.initData
   // di sisi dashboard: user membuka URL lewat tombol bertipe web_app.
   // DASHBOARD_URL wajib HTTPS (ngrok saat development, domain asli saat production).
@@ -241,11 +232,13 @@ function createBot() {
           );
           const totals = await txService.getTotals(user.id, "all");
           clearSession(ctx.chat.id);
-          return ctx.reply(
+          await ctx.reply(
             `Pengeluaran berhasil dicatat.\n\n` +
             added.map((a) => `• ${a.note || "Barang"} — ${formatRupiah(a.amount)}`).join("\n") +
             `\n${formatDate(parsed.date)}\nSaldo sekarang: ${formatRupiah(totals.saldo)}`
           );
+          await checkAndPromptLowBalance(user, totals.saldo, ctx);
+          return;
         } catch (err) {
           console.error(err);
           return ctx.reply(" Gagal menyimpan pengeluaran: " + err.message);
@@ -588,14 +581,294 @@ function createBot() {
       }
     });
 
-  // =========================
-  // PESAN TEKS + STATE
-  // =========================
+    bot.command("tarik_tabungan", async (ctx) => {
+      try {
+        const rawArgs = ctx.message.text.replace(/^\/tarik_tabungan(?:@\w+)?/i, "").trim();
+        const user = await ensureUser(ctx);
+        const totals = await txService.getTotals(user.id, "all");
+
+        if (totals.saldo >= SAVINGS_WITHDRAW_THRESHOLD) {
+          return ctx.reply(
+            `Saldo biasa kamu saat ini (${formatRupiah(totals.saldo)}) masih cukup (di atas batas ${formatRupiah(SAVINGS_WITHDRAW_THRESHOLD)}).\n` +
+            "Penarikan tabungan hanya untuk kondisi saldo menipis atau minus."
+          );
+        }
+
+        const savingItems = await planningService.getSavingItems(user.id);
+        if (!savingItems || savingItems.length === 0) {
+          return ctx.reply("Kamu belum memiliki tabungan atau dana darurat aktif.");
+        }
+
+        // Jika user langsung memasukkan argumen: misal "/tarik_tabungan #1 50000" atau "/tarik_tabungan 50000"
+        if (rawArgs) {
+          let explicitPlanningId = null;
+          let cleaned = rawArgs;
+
+          const idMatch = rawArgs.match(/^#?(\d+)\s*/);
+          // Jika argumen pertama angka dan ada argumen kedua, kemungkinan argumen pertama adalah ID
+          const parts = rawArgs.split(/\s+/);
+          if (parts.length >= 2 && /^\d+$/.test(parts[0])) {
+            explicitPlanningId = Number(parts[0]);
+            cleaned = parts.slice(1).join(" ");
+          } else if (idMatch && rawArgs.startsWith("#")) {
+            explicitPlanningId = Number(idMatch[1]);
+            cleaned = rawArgs.slice(idMatch[0].length).trim();
+          }
+
+          const parsedAmount = parserService.toNumber(cleaned);
+          if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+            return ctx.reply("Nominal penarikan tidak terbaca. Contoh: `/tarik_tabungan 50k` atau `/tarik_tabungan #1 50k`");
+          }
+
+          let targetPlan = null;
+          if (explicitPlanningId) {
+            targetPlan = savingItems.find((s) => Number(s.id) === explicitPlanningId);
+            if (!targetPlan) {
+              return ctx.reply(`Tabungan dengan ID #${explicitPlanningId} tidak ditemukan.`);
+            }
+          } else if (savingItems.length === 1) {
+            targetPlan = savingItems[0];
+          } else {
+            // Tampilkan tombol pilih tabungan untuk nominal tersebut
+            const buttons = savingItems.map((item) => [
+              {
+                text: `${item.title} (Sisa: ${formatRupiah(item.saved_amount)})`,
+                callback_data: `wd_custom:${item.id}:${parsedAmount}`,
+              },
+            ]);
+            return ctx.reply("Pilih tabungan yang ingin ditarik:", {
+              reply_markup: { inline_keyboard: buttons },
+            });
+          }
+
+          const res = await planningService.withdrawDirect(user.id, {
+            planningId: targetPlan.id,
+            amount: parsedAmount,
+            note: "Tarik tabungan mandiri",
+          });
+
+          const afterTotals = await txService.getTotals(user.id, "all");
+          return ctx.reply(
+            `Penarikan Berhasil!\n\n` +
+            `Diambil dari: ${targetPlan.title}\n` +
+            `Jumlah ditarik: ${formatRupiah(res.amount)}\n` +
+            `Sisa saldo tabungan: ${formatRupiah(res.saved_after)}\n` +
+            `Saldo dompet sekarang: ${formatRupiah(afterTotals.saldo)}`
+          );
+        }
+
+        // Jika dipanggil tanpa argumen: tampilkan pilihan cepat
+        const minusAmount = totals.saldo < 0 ? Math.abs(totals.saldo) : 0;
+        const buttons = [];
+
+        savingItems.forEach((item) => {
+          if (minusAmount > 0 && Number(item.saved_amount) >= minusAmount) {
+            buttons.push([
+              {
+                text: `Tutup Minus Saja (${formatRupiah(minusAmount)}) dari ${item.title}`,
+                callback_data: `wd_minus:${item.id}:${minusAmount}`,
+              },
+            ]);
+          }
+          buttons.push([
+            {
+              text: `Tutup Minus + Cadangan Saldo dari ${item.title}`,
+              callback_data: `wd_custom_prompt:${item.id}`,
+            },
+          ]);
+        });
+
+        buttons.push([{ text: "Batal", callback_data: "wd_cancel" }]);
+
+        const listText = savingItems
+          .map((item) => `• #${item.id} ${item.title} — Saldo: ${formatRupiah(item.saved_amount)}`)
+          .join("\n");
+
+        return ctx.reply(
+          `Kondisi saldo dompetmu saat ini: ${formatRupiah(totals.saldo)}\n\n` +
+          `Daftar Tabungan:\n${listText}\n\n` +
+          `Pilih opsi instan di bawah atau ketik:\n` +
+          `/tarik_tabungan #<id> <nominal>`,
+          {
+            reply_markup: { inline_keyboard: buttons },
+          }
+        );
+      } catch (err) {
+        console.error("Error /tarik_tabungan:", err);
+        return ctx.reply("Gagal memproses penarikan tabungan: " + err.message);
+      }
+    });
+
+    // Callback query untuk tombol inline penarikan tabungan
+    bot.on("callback_query", async (ctx) => {
+      const data = ctx.callbackQuery?.data;
+      if (!data) return;
+
+      try {
+        if (data === "wd_cancel") {
+          await ctx.answerCbQuery();
+          return ctx.editMessageText("Opsi penarikan tabungan dibatalkan.");
+        }
+
+        const [action, planIdStr, amountStr] = data.split(":");
+
+        if (action === "wd_custom_prompt") {
+          await ctx.answerCbQuery();
+          const user = await ensureUser(ctx);
+          const planId = Number(planIdStr);
+          const totals = await txService.getTotals(user.id, "all");
+          const minusAmount = totals.saldo < 0 ? Math.abs(totals.saldo) : 0;
+
+          const savingItems = await planningService.getSavingItems(user.id);
+          const targetPlan = savingItems.find((s) => Number(s.id) === planId);
+          if (!targetPlan) return ctx.reply("Tabungan tidak ditemukan.");
+
+          setSession(ctx.chat.id, {
+            type: "tarik_cadangan",
+            step: "input_buffer",
+            planId,
+            planTitle: targetPlan.title,
+            savedAmount: Number(targetPlan.saved_amount),
+            minusAmount,
+          });
+
+          await ctx.editMessageText(
+            `Menarik dari: *${targetPlan.title}* (Tersedia: ${formatRupiah(targetPlan.saved_amount)})\n` +
+            `Minus saat ini: ${formatRupiah(minusAmount)}\n\n` +
+            `Silakan balas pesan ini dengan *nominal tambahan saldo cadangan* yang kamu inginkan (misal: 20k, 50000, 100k).\n` +
+            `Ketik \`/batal\` jika ingin membatalkan.`,
+            { parse_mode: "Markdown" }
+          );
+          return;
+        }
+
+        if (action === "wd_minus" || action === "wd_buffer" || action === "wd_custom") {
+          await ctx.answerCbQuery("Memproses penarikan...");
+          const user = await ensureUser(ctx);
+          const planId = Number(planIdStr);
+          const amount = Number(amountStr);
+
+          const savingItems = await planningService.getSavingItems(user.id);
+          const targetPlan = savingItems.find((s) => Number(s.id) === planId);
+          if (!targetPlan) {
+            return ctx.reply("Tabungan tidak ditemukan.");
+          }
+
+          const res = await planningService.withdrawDirect(user.id, {
+            planningId: planId,
+            amount,
+            note: action === "wd_buffer" ? "Tarik tabungan (+ cadangan dompet)" : "Tarik tabungan (tutup minus)",
+          });
+
+          const afterTotals = await txService.getTotals(user.id, "all");
+          await ctx.editMessageText(
+            `Penarikan Berhasil!\n\n` +
+            `Diambil dari: ${targetPlan.title}\n` +
+            `Jumlah ditarik: ${formatRupiah(res.amount)}\n` +
+            `Sisa saldo tabungan: ${formatRupiah(res.saved_after)}\n` +
+            `Saldo dompet sekarang: ${formatRupiah(afterTotals.saldo)}`
+          );
+        }
+      } catch (err) {
+        console.error("Callback query error:", err);
+        await ctx.reply("Gagal memproses penarikan: " + err.message);
+      }
+    });
+
+    // Helper peringatan otomatis saat saldo <= 0
+    async function checkAndPromptLowBalance(user, currentSaldo, replyCtx) {
+      if (currentSaldo > 0) return;
+
+      try {
+        const savingItems = await planningService.getSavingItems(user.id);
+        if (!savingItems || savingItems.length === 0) return;
+
+        const minusAmount = currentSaldo < 0 ? Math.abs(currentSaldo) : 0;
+        const buttons = [];
+
+        savingItems.forEach((item) => {
+          if (minusAmount > 0 && Number(item.saved_amount) >= minusAmount) {
+            buttons.push([
+              {
+                text: `Tutup Minus Saja (${formatRupiah(minusAmount)}) dari ${item.title}`,
+                callback_data: `wd_minus:${item.id}:${minusAmount}`,
+              },
+            ]);
+          }
+          buttons.push([
+            {
+              text: `Tutup Minus + Cadangan Saldo dari ${item.title}`,
+              callback_data: `wd_custom_prompt:${item.id}`,
+            },
+          ]);
+        });
+
+        if (buttons.length === 0) return;
+        buttons.push([{ text: "Biarkan Minus / Nanti Saja", callback_data: "wd_cancel" }]);
+
+        const listText = savingItems
+          .map((item) => `• #${item.id} ${item.title} — Tersedia: ${formatRupiah(item.saved_amount)}`)
+          .join("\n");
+
+        await replyCtx.reply(
+          `⚠️ Saldo Anda sudah habis/menipis! Kondisi saldo Anda saat ini: ${formatRupiah(currentSaldo)}.\n\n` +
+          `Apakah Anda ingin menarik saldo dari tabungan untuk menutup kekurangan/cadangan dompet?\n\n` +
+          `Tabungan saat ini:\n${listText}\n\n` +
+          `Pilih opsi di bawah:`,
+          {
+            reply_markup: { inline_keyboard: buttons },
+          }
+        );
+      } catch (err) {
+        console.error("Error checkAndPromptLowBalance:", err);
+      }
+    }
   bot.on("text", async (ctx) => {
     const text = ctx.message.text.trim();
     if (!text || text.startsWith("/")) return;
 
     const session = getSession(ctx.chat.id);
+
+    // Tahap tarik tabungan: input nominal cadangan saldo
+    if (session?.type === "tarik_cadangan" && session.step === "input_buffer") {
+      const parsedBuffer = parserService.toNumber(text);
+      if (!Number.isFinite(parsedBuffer) || parsedBuffer <= 0) {
+        return ctx.reply("Nominal belum terbaca. Masukkan angka seperti `20k`, `50000`, atau `100k`. Ketik `/batal` untuk membatalkan.");
+      }
+
+      const totalWithdraw = session.minusAmount + parsedBuffer;
+      if (session.savedAmount < totalWithdraw) {
+        return ctx.reply(
+          `Saldo tabungan tidak cukup.\n` +
+          `Tersedia di ${session.planTitle}: ${formatRupiah(session.savedAmount)}\n` +
+          `Dibutuhkan: ${formatRupiah(totalWithdraw)} (Tutup minus ${formatRupiah(session.minusAmount)} + Cadangan ${formatRupiah(parsedBuffer)})\n\n` +
+          `Silakan masukkan nominal cadangan yang lebih kecil, atau ketik \`/batal\`.`
+        );
+      }
+
+      try {
+        const user = await ensureUser(ctx);
+        const res = await planningService.withdrawDirect(user.id, {
+          planningId: session.planId,
+          amount: totalWithdraw,
+          note: `Tarik tabungan (tutup minus + cadangan dompet)`,
+        });
+
+        clearSession(ctx.chat.id);
+        const afterTotals = await txService.getTotals(user.id, "all");
+        return ctx.reply(
+          `Penarikan Berhasil!\n\n` +
+          `Diambil dari: ${session.planTitle}\n` +
+          `Total ditarik: ${formatRupiah(res.amount)}\n` +
+          `(Menutup minus ${formatRupiah(session.minusAmount)} + cadangan ${formatRupiah(parsedBuffer)})\n\n` +
+          `Sisa saldo tabungan: ${formatRupiah(res.saved_after)}\n` +
+          `Saldo dompet sekarang: ${formatRupiah(afterTotals.saldo)}`
+        );
+      } catch (err) {
+        console.error("Error proses tarik cadangan:", err);
+        return ctx.reply("Gagal memproses penarikan: " + err.message);
+      }
+    }
 
  
     if (session?.type === "pemasukan" && session.step === "amount") {
@@ -732,13 +1005,15 @@ function createBot() {
         const total = added.reduce((sum, a) => sum + Number(a.amount), 0);
         clearSession(ctx.chat.id);
 
-        return ctx.reply(
+        await ctx.reply(
           `Pengeluaran sudah dicatat.\n\n` +
           added.map((a) => `• ${a.note}: ${formatRupiah(a.amount)}`).join("\n") +
           `\n\nTotal: ${formatRupiah(total)}` +
           `\n${formatDate(date)}` +
           `\nSisa saldo: ${formatRupiah(totals.saldo)}`
         );
+        await checkAndPromptLowBalance(user, totals.saldo, ctx);
+        return;
       } catch (err) {
         console.error(err);
         return ctx.reply(" Gagal menyimpan pengeluaran: " + err.message);
@@ -801,13 +1076,17 @@ function createBot() {
       const totals = await txService.getTotals(user.id, "all");
       const total = added.reduce((sum, a) => sum + Number(a.amount), 0);
 
-      ctx.reply(
+      await ctx.reply(
         `${result.type === "pemasukan" ? "Pemasukan" : "Pengeluaran"} sudah dicatat.\n\n` +
           added
             .map((a) => `• ${a.note}: ${formatRupiah(a.amount)}`)
             .join("\n") +
           `\n\  ${result.type === "pemasukan" ? "Saldo sekarang" : "Sisa saldo"}: ${formatRupiah(totals.saldo)}`
       );
+
+      if (result.type === "pengeluaran") {
+        await checkAndPromptLowBalance(user, totals.saldo, ctx);
+      }
     } catch (err) {
       console.error(err);
       ctx.reply(" Gagal menyimpan transaksi: " + err.message);
