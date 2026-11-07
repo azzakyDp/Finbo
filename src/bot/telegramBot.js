@@ -528,8 +528,8 @@ function createBot() {
 
         if (!savingItems || savingItems.length === 0) {
           return ctx.reply(
-            "Kamu belum memiliki tabungan bertipe simpanan.\n" +
-            "Buat terlebih dahulu dengan: /buat_tabungan saving <nama>"
+            "Kamu belum memiliki tabungan simpanan atau dana darurat.\n" +
+            "Buat terlebih dahulu dengan: /buat_tabungan saving <nama> atau /buat_tabungan emergency <nama> <target>"
           );
         }
 
@@ -537,16 +537,16 @@ function createBot() {
         if (explicitPlanningId != null) {
           targetPlanning = savingItems.find((item) => Number(item.id) === explicitPlanningId);
           if (!targetPlanning) {
-            return ctx.reply(`Tabungan simpanan dengan ID #${explicitPlanningId} tidak ditemukan.`);
+            return ctx.reply(`Tabungan/dana darurat dengan ID #${explicitPlanningId} tidak ditemukan.`);
           }
         } else if (savingItems.length === 1) {
           targetPlanning = savingItems[0];
         } else {
           const listText = savingItems
-            .map((item) => `• #${item.id} ${item.title}: ${formatRupiah(item.saved_amount)}`)
+            .map((item) => `• #${item.id} ${item.title} (${item.type === "emergency" ? "Dana Darurat" : "Simpanan"}): ${formatRupiah(item.saved_amount)}`)
             .join("\n");
           return ctx.reply(
-            "Kamu memiliki beberapa tabungan simpanan. Silakan tentukan ID tabungan:\n\n" +
+            "Kamu memiliki beberapa tabungan/dana darurat. Silakan tentukan ID tabungan:\n\n" +
             listText + "\n\n" +
             "Gunakan: /pengeluaran_tabungan #<id> " + cleanedArgs
           );

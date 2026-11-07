@@ -16,8 +16,8 @@ declare
   v_saved numeric; v_saldo numeric; v_total numeric; v_short numeric; v_wid uuid := gen_random_uuid();
 begin
   select saved_amount into v_saved from planning_items
-   where id = p_planning_id and user_id = p_user_id and type = 'saving' for update;
-  if not found then raise exception 'Tabungan tidak ditemukan atau bukan tipe simpanan.'; end if;
+   where id = p_planning_id and user_id = p_user_id and type in ('saving', 'emergency') for update;
+  if not found then raise exception 'Tabungan tidak ditemukan atau bukan tipe simpanan/dana darurat.'; end if;
 
   select greatest(coalesce(sum(case when type = 'pemasukan' then amount else -amount end), 0), 0)
     into v_saldo from transactions where user_id = p_user_id;

@@ -27,7 +27,16 @@ async function getPlanningItems(userId, type = null) {
 }
 
 async function getSavingItems(userId) {
-  return getPlanningItems(userId, "saving");
+  const supabase = getClient();
+  const { data, error } = await supabase
+    .from("planning_items")
+    .select("*")
+    .eq("user_id", userId)
+    .in("type", ["saving", "emergency"])
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+  return data || [];
 }
 
 async function withdrawForExpense(userId, { planningId, items, date }) {
