@@ -153,10 +153,17 @@ app.get("/api/total", async (req, res) => {
 app.delete("/api/transaction/:id", async (req, res) => {
   try {
     const tx = await txService.getTransactionById(req.authenticatedUserId, req.params.id);
-    if (tx && tx.withdrawal_id) {
-      return res.status(409).json({
-        success: false,
-        message: "Bagian dari penarikan tabungan, batalkan lewat /undo",
+    if (!tx) {
+      return res.status(404).json({ success: false, message: `Transaksi #${req.params.id} tidak ditemukan.` });
+    }
+
+    // Jika transaksi merupakan bagian dari penarikan tabungan:
+    // batalkan paket penarikan tabungannya dan kembalikan saldo ke tabungan
+    if (tx.withdrawal_id) {
+      const restored = await planningService.undoWithdrawal(req.authenticatedUserId, tx.withdrawal_id);
+      return res.json({
+        success: true,
+        message: `Transaksi penarikan tabungan berhasil dibatalkan. Rp${Number(restored?.restored || 0).toLocaleString("id-ID")} dikembalikan ke tabungan.`,
       });
     }
 
